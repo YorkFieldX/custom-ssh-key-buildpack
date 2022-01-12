@@ -7,6 +7,8 @@ ENV_DIR=$3
 
 if [[ -f $ENV_DIR/CUSTOM_SSH_KEY && -f $ENV_DIR/CUSTOM_SSH_KEY_HOSTS ]]; then
 
+  echo "-----> Installing custom SSH key"
+
   echo "" >&1
 
   # Ensure we have an ssh folder
@@ -34,5 +36,41 @@ if [[ -f $ENV_DIR/CUSTOM_SSH_KEY && -f $ENV_DIR/CUSTOM_SSH_KEY_HOSTS ]]; then
   done
 
   echo "-----> Successfully added custom SSH key"
+
+fi
+
+if [[ -f $ENV_DIR/CUSTOM_SSH_PRIVATE_KEY && -f $ENV_DIR/CUSTOM_SSH_CERT && -f $ENV_DIR/CUSTOM_SSH_KEY_HOSTS ]]; then
+
+  echo "-----> Installing custom SSH Certificate + Key"
+
+  echo "" >&1
+
+  # Ensure we have an ssh folder
+  if [ ! -d ~/.ssh ]; then
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+  fi
+
+  # Load the private key into custom_key file.
+  base64 --decode $ENV_DIR/CUSTOM_SSH_PRIVATE_KEY > ~/.ssh/id_rsa
+  base64 --decode $ENV_DIR/CUSTOM_SSH_CERTIFICATE > ~/.ssh/id_rsa.pub
+
+  # Change the permissions on the file to
+  # be read-only for this user.
+  chmod 400 ~/.ssh/id_rsa
+  chmod 400 ~/.ssh/id_rsa.pub
+
+  # Split $CUSTOM_SSH_KEY_HOSTS
+  IFS=',' ;for element in `cat $ENV_DIR/CUSTOM_SSH_KEY_HOSTS`;
+  do
+    echo -e "Host $element\n"\
+            "  IdentityFile ~/.ssh/id_rsa\n"\
+            "  IdentitiesOnly yes\n"\
+            "  UserKnownHostsFile=/dev/null\n"\
+            "  StrictHostKeyChecking no"\
+            >> ~/.ssh/config
+  done
+
+  echo "-----> Successfully added custom SSH Certificate + Key"
 
 fi
